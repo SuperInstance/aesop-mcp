@@ -217,10 +217,11 @@ class AesopHandler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         params = {}
         if "?" in self.path:
-            for part in self.path.split("?")[1].split("&"):
+            qs = self.path.split("?", 1)[1]
+            for part in qs.split("&"):
                 if "=" in part:
                     k, v = part.split("=", 1)
-                    params[k] = v.replace("+", " ")  # Fix URL encoding
+                    params[k] = v.replace("+", " ")
         
         if path == "/":
             self._json({
