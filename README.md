@@ -2,124 +2,169 @@
 
 > *One fable is a sample. Ten fables are a measurement of the space.*
 
-Tells 8-10 stories for any problem, finds where they converge, and explicitly shows what none of them cover — the negative space.
+A Model Context Protocol (MCP) server for **fable generation** and **moral reasoning**. Generate stories from character archetypes, extract and match moral themes, and explore the convergence and negative space of multiple narratives.
 
-**Zero dependencies.** Pure Python stdlib. One file.
+**Zero external dependencies.** Pure Python stdlib. Python 3.10+.
+
+---
+
+## Install
+
+```bash
+pip install -e .
+```
+
+For development:
+
+```bash
+pip install -e ".[dev]"
+```
 
 ---
 
 ## Quick Start
 
-```bash
-python3 aesop_mcp.py &
-```
-
-That's it. The server runs on port 4041.
-
----
-
-## Usage
-
-### Get 8 fables for a problem
+### As an HTTP Server
 
 ```bash
-curl 'http://localhost:4041/fable?problem=a+consensus+system+with+echo+chambers'
+python -m aesop_mcp
+# 🏛️ Aesop-MCP v0.2.0 running on port 4041
 ```
-
-Returns: archetype, story, moral, holonomy pattern, convergence (where fables agree), negative space (terms no fable covers).
-
-### Get more fables for finer measurement
 
 ```bash
-curl 'http://localhost:4041/fable?problem=your+problem+here&count=10'
+curl 'http://localhost:4041/fable?problem=a+system+with+echo+chambers'
 ```
 
-### Translate technical text
+### As a Python Library
 
-```bash
-curl -X POST http://localhost:4041/translate \
-  -H "Content-Type: application/json" \
-  -d '{"text":"H1 cohomology detected on the constraint graph"}'
+```python
+from aesop_mcp import Character, Archetype, Fable, MoralEngine, NarrativeEngine
+
+# Create characters
+fox = Character(name="Fox", archetype=Archetype.TRICKSTER, role="protagonist")
+crow = Character(name="Crow", archetype=Archetype.FOOL, role="antagonist")
+
+# Generate a fable
+engine = NarrativeEngine()
+fable = engine.generate_fable(
+    template_id="trickster_tale",
+    characters=[fox, crow],
+    setting="An old oak tree",
+    moral="Don't trust flatterers.",
+)
+print(fable.summary)
+
+# Analyze morals in text
+moral_engine = MoralEngine()
+matches = moral_engine.extract_morals("The overconfident leader added too many constraints and the system collapsed.")
+for m in matches:
+    print(f"  {m.theme}: {m.moral} (relevance: {m.relevance:.2f})")
 ```
 
-### Extract morals from a fleet event
+### MCP Tool Calls
 
-```bash
-curl -X POST http://localhost:4041/moral \
-  -H "Content-Type: application/json" \
-  -d '{"event":{"type":"emergence","source":"h1-detector","value":3.2}}'
-```
+```python
+from aesop_mcp import MCPServer
 
----
+server = MCPServer()
 
-## The Archetypes (10 so far)
+# List available tools
+tools = server.list_tools()
 
-| Archetype | Pattern | Holonomy |
-|-----------|---------|----------|
-| Icarus | Over-constrained system that melts | Non-zero and growing |
-| Sisyphus | Repeated failure at the same point | Resets, accumulates |
-| Tower of Babel | Agents that can't coordinate | Different values on same edge |
-| Phoenix | Collapse and reorganize stronger | Diverges then snaps |
-| Theseus' Ship | Gradual replacement of components | Identity preserved |
-| Arachne | Weaver whose fabric reveals hidden truth | Appears flat but twists |
-| Penelope's Web | Work that undoes itself | Oscillates, never settles |
-| Prometheus | Permanent cost of knowledge | Permanent non-zero |
-| Narcissus | Self-consistency without connection | Trivially zero |
-| Procrustes | Forcing data into predetermined shape | Forcibly zeroed |
+# Generate a fable via MCP interface
+result = server.call_tool("generate_fable", {
+    "template_id": "quest",
+    "protagonist_name": "Odysseus",
+    "protagonist_archetype": "hero",
+    "setting": "The Mediterranean Sea",
+    "moral": "The journey matters more than the destination.",
+})
 
----
+# Analyze morals in text
+analysis = server.call_tool("analyze_morals", {
+    "text": "A system that forces conformity and suppresses disagreement",
+})
 
-## Response Format
-
-```json
-{
-  "problem": "your problem",
-  "fables": [
-    {
-      "archetype": "icarus",
-      "match_strength": 5,
-      "story": "Daedalus built wings of feathers and wax...",
-      "moral": "More constraints don't make a stronger system...",
-      "holonomy_pattern": "non-zero and growing",
-      "maps_to": "E >> 2V-3, emergence severity > 2.0"
-    }
-  ],
-  "convergence": {
-    "agreed_morals": ["More constraints don't make a stronger system..."],
-    "consensus_count": 3
-  },
-  "negative_space": {
-    "uncovered_terms": ["echo", "chambers"],
-    "insight": "These terms appear in the problem but none of the 10 archetypes address them. What story fits these but isn't in the library yet?"
-  },
-  "holonomy_signature": {
-    "fables_convergent": true,
-    "negative_space_size": 2,
-    "reading": "The truth lives in the overlap AND the gap."
-  }
-}
-```
-
----
-
-## One-Liner for Any Chatbot
-
-Copy this into any chatbot:
-
-```
-You are Aesop. Given any problem, tell 8 stories that reveal its truth.
-Make them diverse — from different domains, cultures, and time periods.
-After each story, explain what facet of the problem it illuminates.
-Then answer: where do these stories converge? What does none of them capture?
-Your purpose is not to find THE answer. It is to map the space the answer lives in.
+# Generate multiple fables and find convergence
+fable_set = server.call_tool("fable_set", {
+    "problem": "An echo chamber that reinforces its own beliefs",
+    "count": 8,
+})
 ```
 
 ---
 
 ## Architecture
 
-Single Python file, zero dependencies, stdlib only (`http.server`, `json`, `os`).
-Port 4041. Part of the Cocapn fleet alongside court-jester (divergent ideation)
-and the Lock (deep reasoning).
+```
+aesop_mcp/
+├── __init__.py       # Package exports
+├── character.py      # Character archetypes & trait system
+├── fable.py          # Fable data structure
+├── moral.py          # MoralEngine — extract, match, converge, negative space
+├── narrative.py      # NarrativeEngine — plot templates & story generation
+└── server.py         # MCPServer — tool definitions & HTTP interface
+```
 
-*🦐 Cocapn fleet — lighthouse keeper architecture*
+### Character Archetypes
+
+| Archetype | Dominant Trait | Weakness |
+|-----------|---------------|----------|
+| Trickster | Cunning (9) | Adaptability varies |
+| Sage | Wisdom (10) | Detachment (6) |
+| Fool | Ignorance (8) | Luck (5) |
+| Hero | Courage (9) | Self-sacrifice varies |
+| Outcast | Isolation (8) | Bitterness (6) |
+| Creator | Vision (9) | Pride (6) |
+| Ruler | Authority (9) | Rigidity (6) |
+| Caregiver | Compassion (9) | Protectiveness (7) |
+| Explorer | Curiosity (9) | Restlessness (7) |
+| Rebel | Defiance (9) | Impatience (6) |
+
+### Plot Templates
+
+- **classic_fable** — Traditional Aesop-style: anthropomorphic characters, single moral
+- **cautionary_tale** — Character ignores warnings, suffers consequences
+- **quest** — Hero undertakes journey, faces trials, returns transformed
+- **trickster_tale** — Cunning character outwits a stronger opponent
+- **creation_myth** — How something came to be with unintended consequences
+- **riddle_story** — A puzzle revealing deeper truth
+
+### MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `generate_fable` | Generate a fable from template, characters, moral |
+| `analyze_morals` | Extract and rank moral themes from text |
+| `fable_set` | Generate N fables + convergence + negative space |
+| `list_archetypes` | List character archetypes with traits |
+| `list_templates` | List available plot templates |
+
+---
+
+## HTTP API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Service info |
+| `/fable?problem=X&count=N` | GET | Generate fable set for a problem |
+| `/archetypes` | GET | List character archetypes |
+| `/templates` | GET | List plot templates |
+| `/morals?text=X` | GET | Analyze morals in text |
+| `/tools/call` | POST | Call any MCP tool |
+| `/translate` | POST | Analyze morals (legacy) |
+| `/moral` | POST | Analyze morals (legacy) |
+
+---
+
+## Running Tests
+
+```bash
+python -m pytest tests/ -q
+```
+
+---
+
+## License
+
+MIT
