@@ -341,7 +341,7 @@ class TestHTTPIntegration:
             env={**os.environ, "AESOP_PORT": str(port)},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd="/tmp/aesop-mcp",
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         )
         # Give the server time to start
         time.sleep(1.5)
